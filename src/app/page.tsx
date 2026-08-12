@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -374,12 +374,12 @@ export default function Home() {
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {[
-              ["🍗", "Chicken", "chicken"],
-              ["🥗", "Healthy", "salad"],
-              ["🥞", "Breakfast", "breakfast"],
-              ["🍰", "Desserts", "dessert"],
-              ["🌮", "Quick Meals", "quick"],
-            ].map(([emoji, title, query]) => (
+                ["🍗", "Chicken", "chicken"],
+                ["🥗", "Healthy", "healthy"],
+                ["🥞", "Breakfast", "breakfast"],
+                ["🍰", "Desserts", "dessert"],
+                ["🍝", "Pasta", "pasta"],
+              ].map(([emoji, title, query]) => (
               <button
                 key={title}
                 onClick={() => handlePopularSearch(query)}
@@ -499,3 +499,4 @@ export default function Home() {
     </main>
   );
 }
+
