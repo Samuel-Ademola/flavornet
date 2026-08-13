@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  addFavorite,
+  isFavorite,
+  removeFavorite,
+} from "@/lib/favorites/storage";
 
 type Meal = {
   idMeal: string;
@@ -17,6 +22,7 @@ export default function Home() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   async function searchRecipes(query: string) {
     try {
@@ -45,6 +51,18 @@ export default function Home() {
 
   useEffect(() => {
     searchRecipes("chicken");
+
+    const favorites = localStorage.getItem("flavornet-favorites");
+
+    if (favorites) {
+      try {
+        const parsed = JSON.parse(favorites) as Meal[];
+
+        setFavoriteIds(parsed.map((meal) => meal.idMeal));
+      } catch (error) {
+        console.error("Failed to load favorite recipes:", error);
+      }
+    }
   }, []);
 
   function handleSearch() {
@@ -69,6 +87,20 @@ export default function Home() {
     document
       .getElementById("recipes")
       ?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function toggleFavorite(meal: Meal) {
+    if (isFavorite(meal.idMeal)) {
+      removeFavorite(meal.idMeal);
+
+      setFavoriteIds((current) =>
+        current.filter((id) => id !== meal.idMeal)
+      );
+    } else {
+      addFavorite(meal);
+
+      setFavoriteIds((current) => [...current, meal.idMeal]);
+    }
   }
 
   return (
@@ -218,6 +250,7 @@ export default function Home() {
               {["pasta", "chicken", "breakfast", "dessert"].map((query) => (
                 <button
                   key={query}
+                  type="button"
                   onClick={() => handlePopularSearch(query)}
                   className="rounded-full bg-white px-4 py-2 capitalize shadow-sm transition hover:shadow-md"
                 >
@@ -251,6 +284,7 @@ export default function Home() {
             </div>
 
             <button
+              type="button"
               onClick={() => handlePopularSearch("chicken")}
               className="text-sm font-semibold text-gray-900 transition hover:text-gray-500"
             >
@@ -258,6 +292,7 @@ export default function Home() {
             </button>
           </div>
 
+          {/* Loading */}
           {loading && (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((item) => (
@@ -277,6 +312,7 @@ export default function Home() {
             </div>
           )}
 
+          {/* Error */}
           {!loading && error && (
             <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-12 text-center">
               <h3 className="text-xl font-semibold text-gray-900">
@@ -286,6 +322,7 @@ export default function Home() {
               <p className="mt-2 text-gray-600">{error}</p>
 
               <button
+                type="button"
                 onClick={() => searchRecipes(searchQuery || "chicken")}
                 className="mt-6 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-700"
               >
@@ -294,6 +331,7 @@ export default function Home() {
             </div>
           )}
 
+          {/* No Results */}
           {!loading && !error && meals.length === 0 && (
             <div className="rounded-2xl border border-gray-100 bg-gray-50 px-6 py-12 text-center">
               <h3 className="text-xl font-semibold text-gray-900">
@@ -307,14 +345,34 @@ export default function Home() {
             </div>
           )}
 
+          {/* Recipe Cards */}
           {!loading && !error && meals.length > 0 && (
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {meals.map((meal) => (
                 <Link
                   key={meal.idMeal}
                   href={`/recipes/${meal.idMeal}`}
-                  className="group block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                  className="group relative block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                 >
+                  {/* Favorite Button */}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      toggleFavorite(meal);
+                    }}
+                    aria-label={
+                      favoriteIds.includes(meal.idMeal)
+                        ? `Remove ${meal.strMeal} from favorites`
+                        : `Add ${meal.strMeal} to favorites`
+                    }
+                    className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-xl shadow-sm backdrop-blur transition hover:scale-105"
+                  >
+                    {favoriteIds.includes(meal.idMeal) ? "♥" : "♡"}
+                  </button>
+
+                  {/* Image */}
                   <div className="aspect-[4/3] overflow-hidden bg-gray-100">
                     <img
                       src={meal.strMealThumb}
@@ -323,6 +381,7 @@ export default function Home() {
                     />
                   </div>
 
+                  {/* Card Content */}
                   <div className="p-6">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-orange-600">
                       {meal.strCategory || "Recipe"}
@@ -374,14 +433,15 @@ export default function Home() {
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {[
-                ["🍗", "Chicken", "chicken"],
-                ["🥗", "Healthy", "healthy"],
-                ["🥞", "Breakfast", "breakfast"],
-                ["🍰", "Desserts", "dessert"],
-                ["🍝", "Pasta", "pasta"],
-              ].map(([emoji, title, query]) => (
+              ["🍗", "Chicken", "chicken"],
+              ["🥗", "Healthy", "healthy"],
+              ["🥞", "Breakfast", "breakfast"],
+              ["🍰", "Desserts", "dessert"],
+              ["🍝", "Pasta", "pasta"],
+            ].map(([emoji, title, query]) => (
               <button
                 key={title}
+                type="button"
                 onClick={() => handlePopularSearch(query)}
                 className="group rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md"
               >
@@ -499,4 +559,3 @@ export default function Home() {
     </main>
   );
 }
-
