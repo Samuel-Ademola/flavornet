@@ -34,7 +34,7 @@ export function addFavorite(meal: MealSummary): void {
 
   localStorage.setItem(
     FAVORITES_KEY,
-    JSON.stringify([...favorites, meal])
+    JSON.stringify([meal,...favorites])
   );
 }
 
@@ -50,3 +50,4 @@ export function removeFavorite(idMeal: string): void {
     JSON.stringify(updatedFavorites)
   );
 }
+

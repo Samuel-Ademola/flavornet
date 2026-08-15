@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  addFavorite,
-  isFavorite,
-  removeFavorite,
-} from "@/lib/favorites/storage";
+import FavoriteButton from "@/components/FavoriteButton";
+
 
 type Meal = {
   idMeal: string;
@@ -22,7 +19,6 @@ export default function Home() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   async function searchRecipes(query: string) {
     try {
@@ -50,19 +46,9 @@ export default function Home() {
   }
 
   useEffect(() => {
-    searchRecipes("chicken");
+    searchRecipes("");
 
-    const favorites = localStorage.getItem("flavornet-favorites");
 
-    if (favorites) {
-      try {
-        const parsed = JSON.parse(favorites) as Meal[];
-
-        setFavoriteIds(parsed.map((meal) => meal.idMeal));
-      } catch (error) {
-        console.error("Failed to load favorite recipes:", error);
-      }
-    }
   }, []);
 
   function handleSearch() {
@@ -89,134 +75,170 @@ export default function Home() {
       ?.scrollIntoView({ behavior: "smooth" });
   }
 
-  function toggleFavorite(meal: Meal) {
-    if (isFavorite(meal.idMeal)) {
-      removeFavorite(meal.idMeal);
+  async function handleSurpriseMe() {
+    try {
+      setLoading(true);
+      setError("");
 
-      setFavoriteIds((current) =>
-        current.filter((id) => id !== meal.idMeal)
-      );
-    } else {
-      addFavorite(meal);
+      const response = await fetch("/api/recipes/random");
 
-      setFavoriteIds((current) => [...current, meal.idMeal]);
+      if (!response.ok) {
+        throw new Error("Failed to fetch random recipe");
+      }
+
+      const recipe = await response.json();
+
+      if (!recipe?.idMeal) {
+        throw new Error("No random recipe found");
+      }
+
+      window.location.href = `/recipes/${recipe.idMeal}`;
+    } catch (err) {
+      console.error(err);
+      setError("Unable to load a random recipe. Please try again.");
+      setLoading(false);
     }
   }
+
 
   return (
     <main className="min-h-screen bg-white">
       {/* Navbar */}
-      <nav className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="flex h-20 items-center justify-between">
-            <Link
-              href="/"
-              className="text-2xl font-bold tracking-tight text-gray-900"
-            >
-              FlavorNet
-            </Link>
+<nav className="border-b border-gray-200 bg-white">
+  <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="flex min-h-16 items-center justify-between py-3 sm:min-h-20 sm:py-0">
+      {/* Logo */}
+      <Link
+        href="/"
+        className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl"
+        onClick={() => {
+          window.history.replaceState(null, "", "/");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      >
+        FlavorNet
+      </Link>
 
-            <div className="hidden items-center gap-8 md:flex">
-              <a
-                href="#recipes"
-                className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
-              >
-                Recipes
-              </a>
+      {/* Desktop Navigation */}
+      <div className="hidden items-center gap-8 md:flex">
+        <a
+          href="#recipes"
+          className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
+        >
+          Recipes
+        </a>
 
-              <a
-                href="#categories"
-                className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
-              >
-                Categories
-              </a>
+        <a
+          href="#categories"
+          className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
+        >
+          Categories
+        </a>
 
-              <a
-                href="#about"
-                className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
-              >
-                About
-              </a>
+        <a
+          href="#about"
+          className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
+        >
+          About
+        </a>
 
-              <a
-                href="#recipes"
-                className="rounded-full bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-700"
-              >
-                Explore Recipes
-              </a>
-            </div>
+        <Link
+          href="/favorites"
+          className="text-sm font-medium text-gray-600 transition hover:text-orange-600"
+        >
+          ♥ Favorites
+        </Link>
 
-            <button
-              type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={menuOpen}
-              className="rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 md:hidden"
-            >
-              {menuOpen ? "✕" : "☰"}
-            </button>
-          </div>
+        <a
+          href="#recipes"
+          className="rounded-full bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-700"
+        >
+          Explore Recipes
+        </a>
+      </div>
 
-          {menuOpen && (
-            <div className="border-t border-gray-100 py-4 md:hidden">
-              <div className="flex flex-col gap-2">
-                <a
-                  href="#recipes"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Recipes
-                </a>
+      {/* Mobile Menu Button */}
+      <button
+        type="button"
+        onClick={() => setMenuOpen(!menuOpen)}
+        aria-label={menuOpen ? "Close menu" : "Open menu"}
+        aria-expanded={menuOpen}
+        className="rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 md:hidden"
+      >
+        {menuOpen ? "✕" : "☰"}
+      </button>
+    </div>
 
-                <a
-                  href="#categories"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Categories
-                </a>
+    {/* Mobile Navigation */}
+    {menuOpen && (
+      <div className="border-t border-gray-100 py-4 md:hidden">
+        <div className="flex flex-col gap-2">
+          <a
+            href="#recipes"
+            onClick={() => setMenuOpen(false)}
+            className="rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Recipes
+          </a>
 
-                <a
-                  href="#about"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  About
-                </a>
+          <a
+            href="#categories"
+            onClick={() => setMenuOpen(false)}
+            className="rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Categories
+          </a>
 
-                <a
-                  href="#recipes"
-                  onClick={() => setMenuOpen(false)}
-                  className="mt-2 rounded-full bg-gray-900 px-5 py-3 text-center text-sm font-medium text-white hover:bg-gray-700"
-                >
-                  Explore Recipes
-                </a>
-              </div>
-            </div>
-          )}
+          <a
+            href="#about"
+            onClick={() => setMenuOpen(false)}
+            className="rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            About
+          </a>
+
+          {/* Mobile Favorites */}
+          <Link
+            href="/favorites"
+            onClick={() => setMenuOpen(false)}
+            className="rounded-lg px-4 py-3 text-sm font-semibold text-orange-600 hover:bg-orange-50"
+          >
+            Favorites
+          </Link>
+
+          <a
+            href="#recipes"
+            onClick={() => setMenuOpen(false)}
+            className="mt-2 rounded-full bg-gray-900 px-5 py-3 text-center text-sm font-medium text-white hover:bg-gray-700"
+          >
+            Explore Recipes
+          </a>
         </div>
-      </nav>
+      </div>
+    )}
+  </div>
+</nav>
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-[#fffaf5]">
-        <div className="mx-auto flex min-h-[650px] max-w-7xl items-center px-6 py-20">
-          <div className="max-w-3xl">
-            <p className="mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-orange-600">
+        <div className="mx-auto flex min-h-[560px] w-full max-w-7xl items-center px-4 py-14 sm:min-h-[620px] sm:px-6 sm:py-20 lg:min-h-[650px] lg:px-8">
+          <div className="mx-auto w-full max-w-3xl text-center">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-orange-600 sm:mb-5 sm:text-sm sm:tracking-[0.2em]">
               Discover your next favorite meal
             </p>
 
-            <h1 className="text-5xl font-bold leading-tight tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
+            <h1 className="text-4xl font-bold leading-[1.08] tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
               Delicious recipes,
               <br />
               made for <span className="text-orange-600">real life.</span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-gray-600 sm:text-xl">
+            <p className="mt-5 max-w-2xl text-base leading-7 text-gray-600 sm:mt-6 sm:text-lg sm:leading-8 lg:text-xl">
               Find simple, inspiring recipes for every craving, occasion, and
               skill level. Discover something delicious and make it your own.
             </p>
 
-            <div className="mt-10 flex max-w-2xl flex-col gap-3 sm:flex-row">
+            <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col gap-3 sm:mt-10">
               <div className="flex flex-1 items-center rounded-full border border-gray-200 bg-white px-5 shadow-sm">
                 <span className="mr-3 text-gray-400">⌕</span>
 
@@ -232,19 +254,28 @@ export default function Home() {
                   placeholder="Search recipes, ingredients, or dishes..."
                   className="w-full bg-transparent py-4 text-sm text-gray-900 outline-none placeholder:text-gray-400"
                 />
-              </div>
+              </div>              <div className="grid w-full grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  disabled={loading}
+                  className="rounded-full bg-gray-900 px-7 py-4 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Searching..." : "Search Recipes"}
+                </button>
 
-              <button
-                type="button"
-                onClick={handleSearch}
-                disabled={loading}
-                className="rounded-full bg-gray-900 px-7 py-4 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? "Searching..." : "Search Recipes"}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleSurpriseMe}
+                  disabled={loading}
+                  className="rounded-full border border-gray-300 bg-white px-7 py-4 text-sm font-semibold text-gray-900 transition hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  🎲 Surprise Me
+                </button>
+              </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-gray-500">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm text-gray-500">
               <span>Popular:</span>
 
               {["pasta", "chicken", "breakfast", "dessert"].map((query) => (
@@ -263,15 +294,15 @@ export default function Home() {
       </section>
 
       {/* Recipes */}
-      <section id="recipes" className="border-t border-gray-100 px-6 py-20">
+      <section id="recipes" className="border-t border-gray-100 px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="mb-8 flex flex-col justify-between gap-5 sm:mb-10 sm:flex-row sm:items-end">
             <div>
               <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-gray-500">
                 Fresh inspiration
               </p>
 
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl lg:text-4xl">
                 {searchQuery
                   ? `Recipes for "${searchQuery}"`
                   : "Featured recipes"}
@@ -294,7 +325,7 @@ export default function Home() {
 
           {/* Loading */}
           {loading && (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((item) => (
                 <div
                   key={item}
@@ -315,7 +346,7 @@ export default function Home() {
           {/* Error */}
           {!loading && error && (
             <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-12 text-center">
-              <h3 className="text-xl font-semibold text-gray-900">
+              <h3 className="break-words text-lg font-semibold text-gray-900 sm:text-xl">
                 Something went wrong
               </h3>
 
@@ -334,7 +365,7 @@ export default function Home() {
           {/* No Results */}
           {!loading && !error && meals.length === 0 && (
             <div className="rounded-2xl border border-gray-100 bg-gray-50 px-6 py-12 text-center">
-              <h3 className="text-xl font-semibold text-gray-900">
+              <h3 className="break-words text-lg font-semibold text-gray-900 sm:text-xl">
                 No recipes found
               </h3>
 
@@ -347,7 +378,7 @@ export default function Home() {
 
           {/* Recipe Cards */}
           {!loading && !error && meals.length > 0 && (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
               {meals.map((meal) => (
                 <Link
                   key={meal.idMeal}
@@ -355,22 +386,11 @@ export default function Home() {
                   className="group relative block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                 >
                   {/* Favorite Button */}
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      toggleFavorite(meal);
-                    }}
-                    aria-label={
-                      favoriteIds.includes(meal.idMeal)
-                        ? `Remove ${meal.strMeal} from favorites`
-                        : `Add ${meal.strMeal} to favorites`
-                    }
-                    className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-xl shadow-sm backdrop-blur transition hover:scale-105"
-                  >
-                    {favoriteIds.includes(meal.idMeal) ? "♥" : "♡"}
-                  </button>
+                  <FavoriteButton
+                    recipe={meal}
+                    compact
+                    onToggle={() => {}}
+                  />
 
                   {/* Image */}
                   <div className="aspect-[4/3] overflow-hidden bg-gray-100">
@@ -382,12 +402,12 @@ export default function Home() {
                   </div>
 
                   {/* Card Content */}
-                  <div className="p-6">
+                  <div className="p-5 sm:p-6">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-orange-600">
                       {meal.strCategory || "Recipe"}
                     </p>
 
-                    <h3 className="text-xl font-semibold text-gray-900">
+                    <h3 className="break-words text-lg font-semibold text-gray-900 sm:text-xl">
                       {meal.strMeal}
                     </h3>
 
@@ -422,7 +442,7 @@ export default function Home() {
               Browse by category
             </p>
 
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl lg:text-4xl">
               What are you craving?
             </h2>
 
@@ -467,7 +487,7 @@ export default function Home() {
                 Why FlavorNet
               </p>
 
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl lg:text-4xl">
                 Good food shouldn't feel complicated.
               </h2>
 
@@ -559,3 +579,19 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
